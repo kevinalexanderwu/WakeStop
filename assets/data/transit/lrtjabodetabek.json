@@ -1,0 +1,20 @@
+[
+  {"id": "lrtjb_001", "name": "Dukuh Atas", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 1, "latitude": -6.204706, "longitude": 106.825646, "interchange": true, "active": true},
+  {"id": "lrtjb_002", "name": "Setiabudi", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 2, "latitude": -6.209277, "longitude": 106.830211, "interchange": true, "active": true},
+  {"id": "lrtjb_003", "name": "Rasuna Said", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 3, "latitude": -6.207500, "longitude": 106.828000, "interchange": false, "active": true},
+  {"id": "lrtjb_004", "name": "Kuningan", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 4, "latitude": -6.213500, "longitude": 106.830500, "interchange": false, "active": true},
+  {"id": "lrtjb_005", "name": "Pancoran", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 5, "latitude": -6.242127, "longitude": 106.838469, "interchange": false, "active": true},
+  {"id": "lrtjb_006", "name": "Cikoko", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 6, "latitude": -6.243000, "longitude": 106.851000, "interchange": true, "active": true},
+  {"id": "lrtjb_007", "name": "Ciliwung", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 7, "latitude": -6.243477, "longitude": 106.864131, "interchange": false, "active": true},
+  {"id": "lrtjb_008", "name": "Cawang", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 8, "latitude": -6.246225, "longitude": 106.872386, "interchange": true, "active": true},
+  {"id": "lrtjb_009", "name": "TMII", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 9, "latitude": -6.292874, "longitude": 106.880535, "interchange": false, "active": true},
+  {"id": "lrtjb_010", "name": "Kampung Rambutan", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 10, "latitude": -6.309541, "longitude": 106.884325, "interchange": true, "active": true},
+  {"id": "lrtjb_011", "name": "Ciracas", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 11, "latitude": -6.323700, "longitude": 106.886700, "interchange": false, "active": true},
+  {"id": "lrtjb_012", "name": "Harjamukti", "mode": "LRT Jabodebek", "line": "Cibubur Line", "order": 12, "latitude": -6.373988, "longitude": 106.895623, "interchange": false, "active": true},
+  {"id": "lrtjb_013", "name": "Halim", "mode": "LRT Jabodebek", "line": "Bekasi Line", "order": 9, "latitude": -6.266400, "longitude": 106.888600, "interchange": true, "active": true},
+  {"id": "lrtjb_014", "name": "Jatibening Baru", "mode": "LRT Jabodebek", "line": "Bekasi Line", "order": 10, "latitude": -6.255100, "longitude": 106.929900, "interchange": false, "active": true},
+  {"id": "lrtjb_015", "name": "Cikunir 1", "mode": "LRT Jabodebek", "line": "Bekasi Line", "order": 11, "latitude": -6.256240, "longitude": 106.950998, "interchange": false, "active": true},
+  {"id": "lrtjb_016", "name": "Cikunir 2", "mode": "LRT Jabodebek", "line": "Bekasi Line", "order": 12, "latitude": -6.254512, "longitude": 106.963378, "interchange": false, "active": true},
+  {"id": "lrtjb_017", "name": "Bekasi Barat", "mode": "LRT Jabodebek", "line": "Bekasi Line", "order": 13, "latitude": -6.248100, "longitude": 106.975400, "interchange": false, "active": true},
+  {"id": "lrtjb_018", "name": "Jati Mulya", "mode": "LRT Jabodebek", "line": "Bekasi Line", "order": 14, "latitude": -6.263952, "longitude": 107.021432, "interchange": false, "active": true}
+]

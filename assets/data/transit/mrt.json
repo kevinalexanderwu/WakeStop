@@ -1,0 +1,15 @@
+[
+  {"id": "mrt_001", "name": "Lebak Bulus Grab", "mode": "MRT", "line": "North-South", "order": 1, "latitude": -6.2896, "longitude": 106.7750, "interchange": false, "active": true},
+  {"id": "mrt_002", "name": "Fatmawati", "mode": "MRT", "line": "North-South", "order": 2, "latitude": -6.2913, "longitude": 106.7947, "interchange": false, "active": true},
+  {"id": "mrt_003", "name": "Cipete Raya", "mode": "MRT", "line": "North-South", "order": 3, "latitude": -6.2807, "longitude": 106.7975, "interchange": false, "active": true},
+  {"id": "mrt_004", "name": "Haji Nawi", "mode": "MRT", "line": "North-South", "order": 4, "latitude": -6.2679, "longitude": 106.7973, "interchange": false, "active": true},
+  {"id": "mrt_005", "name": "Blok A", "mode": "MRT", "line": "North-South", "order": 5, "latitude": -6.2529, "longitude": 106.7975, "interchange": false, "active": true},
+  {"id": "mrt_006", "name": "Blok M BCA", "mode": "MRT", "line": "North-South", "order": 6, "latitude": -6.2440, "longitude": 106.7982, "interchange": true, "active": true},
+  {"id": "mrt_007", "name": "ASEAN", "mode": "MRT", "line": "North-South", "order": 7, "latitude": -6.2391, "longitude": 106.7986, "interchange": true, "active": true},
+  {"id": "mrt_008", "name": "Senayan Mastercard", "mode": "MRT", "line": "North-South", "order": 8, "latitude": -6.2249, "longitude": 106.8003, "interchange": true, "active": true},
+  {"id": "mrt_009", "name": "Istora Mandiri", "mode": "MRT", "line": "North-South", "order": 9, "latitude": -6.2183, "longitude": 106.8082, "interchange": false, "active": true},
+  {"id": "mrt_010", "name": "Bendungan Hilir", "mode": "MRT", "line": "North-South", "order": 10, "latitude": -6.2039, "longitude": 106.8115, "interchange": false, "active": true},
+  {"id": "mrt_011", "name": "Setiabudi Astra", "mode": "MRT", "line": "North-South", "order": 11, "latitude": -6.2013, "longitude": 106.8226, "interchange": false, "active": true},
+  {"id": "mrt_012", "name": "Dukuh Atas BNI", "mode": "MRT", "line": "North-South", "order": 12, "latitude": -6.1974, "longitude": 106.8228, "interchange": true, "active": true},
+  {"id": "mrt_013", "name": "Bundaran HI", "mode": "MRT", "line": "North-South", "order": 13, "latitude": -6.1953, "longitude": 106.8232, "interchange": true, "active": true}
+]

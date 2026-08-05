@@ -1,0 +1,8 @@
+[
+  {"id": "lrtj_001", "name": "Pegangsaan Dua", "mode": "LRT Jakarta", "line": "Line 1", "order": 1, "latitude": -6.15579, "longitude": 106.91424, "interchange": false, "active": true},
+  {"id": "lrtj_002", "name": "Boulevard Utara", "mode": "LRT Jakarta", "line": "Line 1", "order": 2, "latitude": -6.15941, "longitude": 106.90601, "interchange": false, "active": true},
+  {"id": "lrtj_003", "name": "Boulevard Selatan", "mode": "LRT Jakarta", "line": "Line 1", "order": 3, "latitude": -6.16899, "longitude": 106.90000, "interchange": false, "active": true},
+  {"id": "lrtj_004", "name": "Pulomas", "mode": "LRT Jakarta", "line": "Line 1", "order": 4, "latitude": -6.18410, "longitude": 106.89130, "interchange": false, "active": true},
+  {"id": "lrtj_005", "name": "Equestrian", "mode": "LRT Jakarta", "line": "Line 1", "order": 5, "latitude": -6.18406, "longitude": 106.89127, "interchange": false, "active": true},
+  {"id": "lrtj_006", "name": "Velodrome", "mode": "LRT Jakarta", "line": "Line 1", "order": 6, "latitude": -6.19258, "longitude": 106.89121, "interchange": true, "active": true}
+]
