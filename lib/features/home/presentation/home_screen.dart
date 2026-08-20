@@ -463,22 +463,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           progress: progress,
                           distanceMeters: trip.distanceMeters,
                           etaMinutes: eta,
-                          onCancel: ()async {
+                          onCancel: () async {
                             await AlarmService.instance.stop();
+
                             ref
-                                .read(
-                                  tripProvider.notifier,
-                                )
+                                .read(tripProvider.notifier)
                                 .stopTrip();
+
+                            ref
+                                .read(selectedDestinationProvider.notifier)
+                                .state = null;
+
                             setState(() {
                               _alarmTriggered = false;
                             });
 
                             ref
-                                .read(
-                                  homeStateProvider
-                                      .notifier,
-                                )
+                                .read(homeStateProvider.notifier)
                                 .reset();
                           },
 
