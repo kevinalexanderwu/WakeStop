@@ -445,9 +445,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       HomeViewState.activeTrip =>
                         ActiveTripCard(
 
-                          onDemo: () {
-                          _startDemo();
-                        },
                           currentStation:
                               trip.currentStation?.name ?? "-",
 
