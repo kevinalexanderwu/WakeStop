@@ -20,7 +20,6 @@ class ActiveTripCard extends StatelessWidget {
     required this.onDebugNext,
     required this.onDebugPrevious,
     required this.locationReady,
-    required this.onDemo,
   });
 
   final String destination;
@@ -30,7 +29,6 @@ class ActiveTripCard extends StatelessWidget {
   final int etaMinutes;
   final double distanceMeters;
   final String currentStation;
-  final VoidCallback onDemo;
   final String nextStation;
   final int remainingStops;
 
@@ -41,7 +39,13 @@ class ActiveTripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AppBottomSheetShell(
+return AppBottomSheetShell(
+  child: ConstrainedBox(
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+    ),
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -245,16 +249,14 @@ class ActiveTripCard extends StatelessWidget {
               onCancel();
             },
           ),
-          PrimaryButton(
-            label: "Start Demo",
-            icon: const Icon(Icons.play_arrow),
-            onPressed: onDemo,
-          ),
 
         ],
       ),
-    );
-  }
+    ),
+  ),
+);
+}
+
 }
 
 class _InfoTile extends StatelessWidget {

@@ -332,17 +332,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               });
             },
           ),
-          Positioned(
-            top: 60,
-            right: 16,
-            child: FloatingActionButton.small(
-              heroTag: "settings",
-              onPressed: () {
-                context.push('/settings');
-              },
-              child: const Icon(Icons.settings),
-            ),
-          ),
           MapFab(
             onPressed: () {
               final current = location.value;
