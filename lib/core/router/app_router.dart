@@ -7,9 +7,28 @@ import 'package:wakestop/features/permissions/presentation/location_permission_s
 import 'package:wakestop/features/home/presentation/home_screen.dart';
 import 'package:wakestop/features/home/presentation/screens/search_screen.dart';
 import 'package:wakestop/features/settings/presentation/settings_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
+redirect: (context, state) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final setupCompleted =
+      prefs.getBool('setup_completed') ?? false;
+
+  final isInitialFlow =
+      state.matchedLocation == '/' ||
+      state.matchedLocation == '/onboarding' ||
+      state.matchedLocation == '/auth' ||
+      state.matchedLocation == '/permission/location';
+
+  if (setupCompleted && isInitialFlow) {
+    return '/home';
+  }
+
+  return null;
+},
   routes: [
     GoRoute(
       path: '/',
@@ -52,12 +71,6 @@ final GoRouter appRouter = GoRouter(
       path: '/alarm',
       builder: (context, state) =>
           const _PlaceholderPage(title: 'Alarm'),
-    ),
-
-    GoRoute(
-      path: '/settings',
-      builder: (context, state) =>
-          const _PlaceholderPage(title: 'Settings'),
     ),
 
     GoRoute(

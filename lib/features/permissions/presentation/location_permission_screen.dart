@@ -1,8 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationPermissionScreen extends StatelessWidget {
   const LocationPermissionScreen({super.key});
+
+  Future<void> _requestLocation(BuildContext context) async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+      return;
+    }
+
+    LocationPermission permission =
+        await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (context.mounted) {
+        context.go('/home');
+      }
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool('setup_completed', true);
+
+    if (context.mounted) {
+      context.go('/home');
+    }
+  }
+
+  Future<void> _skip(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool('setup_completed', true);
+
+    if (context.mounted) {
+      context.go('/home');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,19 +95,18 @@ class LocationPermissionScreen extends StatelessWidget {
 
               const Spacer(),
 
-              FilledButton(
-                onPressed: () {
-                  context.go('/home');
-                },
-                child: const Text("Allow Location"),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => _requestLocation(context),
+                  child: const Text("Allow Location"),
+                ),
               ),
 
               const SizedBox(height: 14),
 
               TextButton(
-                onPressed: () {
-                  context.go('/home');
-                },
+                onPressed: () => _skip(context),
                 child: const Text("Maybe Later"),
               ),
             ],
