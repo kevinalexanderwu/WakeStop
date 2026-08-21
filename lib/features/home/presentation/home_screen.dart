@@ -32,7 +32,8 @@ import 'package:wakestop/core/services/location_service.dart';
 import 'package:wakestop/core/services/distance_service.dart';
 import 'package:wakestop/features/settings/providers/alarm_settings_provider.dart';
 import 'package:flutter_map/flutter_map.dart';
-
+import 'package:wakestop/core/services/trip_service.dart';
+import 'package:go_router/go_router.dart';
 
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -43,6 +44,9 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final TripService _tripService = TripService();
+
+  
   
   TransportType _selectedTransport = TransportType.all;
   final LocationService _locationService = LocationService();
@@ -53,6 +57,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   double? _alarmTriggerDistance;
   Timer? _demoTimer;
   StreamSubscription<Position>? _locationSubscription;
+  String? _activeTripId;
   @override
   void initState() {
     super.initState();
@@ -324,6 +329,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
 
+          Positioned(
+            top: 16,
+            right: 16,
+            child: SafeArea(
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                elevation: 4,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.history_rounded,
+                    color: Colors.black87,
+                  ),
+                  onPressed: () {
+                    context.push('/trip-history');
+                  },
+                ),
+              ),
+            ),
+          ),
+
           TransportFilterChips(
             selected: _selectedTransport,
             onSelected: (transport) {
@@ -397,48 +423,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                           stops: previewStops,
 
-                          onStartAlarm: () async{
-                            final destination =
-                                selectedDestination;
+                          onStartAlarm: () async {
+                            final destination = selectedDestination;
 
                             if (destination == null) {
                               return;
                             }
 
-                            final origin =
-                                nearestStation.value ??
-                                    stations.first;
+                            try {
+                              final origin =
+                                  nearestStation.value ?? stations.first;
 
-                          final position = await Geolocator.getCurrentPosition();
-                          final distance = Geolocator.distanceBetween(
-                            position.latitude,
-                            position.longitude,
-                            destination.latitude,
-                            destination.longitude,
-                          );
+                              final position = await Geolocator.getCurrentPosition();
 
-                          ref.read(tripProvider.notifier).startTrip(
-                            stations: stations,
-                            origin: origin,
-                            destination: destination,
-                            initialDistance: distance,
-                          );
+                              final distance = Geolocator.distanceBetween(
+                                position.latitude,
+                                position.longitude,
+                                destination.latitude,
+                                destination.longitude,
+                              );
 
-                          // PINDAH KE HALAMAN ACTIVE DULU
-                          ref.read(homeStateProvider.notifier).startTrip();
+                              // Simpan perjalanan ke Supabase
+                              _activeTripId = await _tripService.startTrip(
+                                destinationName: destination.name,
+                                transportType: destination.line,
+                                destinationLat: destination.latitude,
+                                destinationLng: destination.longitude,
+                                alarmDistance: ref.read(alarmDistanceProvider),
+                              );
 
-                          // Baru bunyikan alarm
-                          if (distance <= 500) {
-                            _alarmTriggered = true;
+                              // Mulai perjalanan di aplikasi
+                              ref.read(tripProvider.notifier).startTrip(
+                                stations: stations,
+                                origin: origin,
+                                destination: destination,
+                                initialDistance: distance,
+                              );
 
-                            NotificationService.instance.showWakeAlarm(
-                              stationName: destination.name,
-                            );
+                              // Ubah tampilan menjadi active trip
+                              ref.read(homeStateProvider.notifier).startTrip();
 
-                            AlarmService.instance.play();
-                          }
+                              // Jika sudah dekat dengan destinasi
+                              if (distance <= ref.read(alarmDistanceProvider)) {
+                                _alarmTriggered = true;
 
-                          ref.read(homeStateProvider.notifier).startTrip();
+                                await NotificationService.instance.showWakeAlarm(
+                                  stationName: destination.name,
+                                );
+
+                                await AlarmService.instance.play();
+                              }
+
+                              debugPrint('Trip berhasil disimpan: $_activeTripId');
+                            } catch (e) {
+                              debugPrint('Gagal memulai trip: $e');
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Gagal menyimpan perjalanan: $e',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
                           },
                         ),
 
@@ -464,23 +513,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           distanceMeters: trip.distanceMeters,
                           etaMinutes: eta,
                           onCancel: () async {
-                            await AlarmService.instance.stop();
+                            try {
+                              // Stop alarm
+                              await AlarmService.instance.stop();
 
-                            ref
-                                .read(tripProvider.notifier)
-                                .stopTrip();
+                              // Update perjalanan di Supabase
+                              if (_activeTripId != null) {
+                                await _tripService.cancelTrip(_activeTripId!);
 
-                            ref
-                                .read(selectedDestinationProvider.notifier)
-                                .state = null;
+                                debugPrint(
+                                  'Trip dibatalkan: $_activeTripId',
+                                );
 
-                            setState(() {
-                              _alarmTriggered = false;
-                            });
+                                _activeTripId = null;
+                              }
 
-                            ref
-                                .read(homeStateProvider.notifier)
-                                .reset();
+                              // Stop perjalanan lokal
+                              ref
+                                  .read(tripProvider.notifier)
+                                  .stopTrip();
+
+                              // Hapus destinasi
+                              ref
+                                  .read(selectedDestinationProvider.notifier)
+                                  .state = null;
+
+                              setState(() {
+                                _alarmTriggered = false;
+                              });
+
+                              // Kembali ke home
+                              ref
+                                  .read(homeStateProvider.notifier)
+                                  .reset();
+                            } catch (e) {
+                              debugPrint('Gagal membatalkan trip: $e');
+                            }
                           },
 
                           onDebugPrevious: () {

@@ -8,22 +8,21 @@ import 'package:wakestop/features/home/presentation/home_screen.dart';
 import 'package:wakestop/features/home/presentation/screens/search_screen.dart';
 import 'package:wakestop/features/settings/presentation/settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakestop/features/trip_history/presentation/trip_history_screen.dart';
 
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/auth',
 redirect: (context, state) async {
   final prefs = await SharedPreferences.getInstance();
 
   final setupCompleted =
       prefs.getBool('setup_completed') ?? false;
 
-  final isInitialFlow =
-      state.matchedLocation == '/' ||
-      state.matchedLocation == '/onboarding' ||
-      state.matchedLocation == '/auth' ||
-      state.matchedLocation == '/permission/location';
+  final currentLocation = state.matchedLocation;
 
-  if (setupCompleted && isInitialFlow) {
+  // Jika setup sudah selesai, hanya splash yang langsung ke home.
+  // Auth tetap boleh dibuka untuk Login/Register.
+  if (setupCompleted && currentLocation == '/') {
     return '/home';
   }
 
@@ -76,6 +75,10 @@ redirect: (context, state) async {
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/trip-history',
+      builder: (context, state) => const TripHistoryScreen(),
     ),
   ],
 );
