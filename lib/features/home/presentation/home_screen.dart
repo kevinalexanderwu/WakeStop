@@ -339,6 +339,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 elevation: 4,
                 child: IconButton(
                   icon: const Icon(
+                    Icons.person_outline_rounded,
+                    color: Colors.black87,
+                  ),
+                  tooltip: 'Account',
+                  onPressed: () {
+                    context.push('/account');
+                  },
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: 16,
+            right: 16,
+            child: SafeArea(
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                elevation: 4,
+                child: IconButton(
+                  icon: const Icon(
                     Icons.history_rounded,
                     color: Colors.black87,
                   ),

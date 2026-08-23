@@ -9,6 +9,7 @@ import 'package:wakestop/features/home/presentation/screens/search_screen.dart';
 import 'package:wakestop/features/settings/presentation/settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakestop/features/trip_history/presentation/trip_history_screen.dart';
+import 'package:wakestop/features/account/presentation/account_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/auth',
@@ -79,6 +80,10 @@ redirect: (context, state) async {
     GoRoute(
       path: '/trip-history',
       builder: (context, state) => const TripHistoryScreen(),
+    ),
+    GoRoute(
+      path: '/account',
+      builder: (context, state) => const AccountScreen(),
     ),
   ],
 );
