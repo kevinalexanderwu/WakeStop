@@ -320,13 +320,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               final station = result as Station;
 
-              ref.read(selectedDestinationProvider.notifier).state =
-                  station;
+              ref.read(selectedDestinationProvider.notifier).state = station;
 
               ref
                   .read(homeStateProvider.notifier)
                   .selectDestination();
             },
+          ),
+
+
+
+          Positioned(
+            top: 16,
+            right: 16,
+            child: SafeArea(
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                elevation: 4,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.person_outline_rounded,
+                    color: Colors.black87,
+                  ),
+                  tooltip: 'Account',
+                  onPressed: () {
+                    context.push('/account');
+                  },
+                ),
+              ),
+            ),
           ),
 
           Positioned(
@@ -380,6 +403,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               });
             },
           ),
+
+          Positioned(
+            top: 94,
+            right: 24,
+            child: SafeArea(
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                elevation: 4,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.person_outline_rounded,
+                    color: Color(0xFF202B40),
+                  ),
+                  iconSize: 30,
+                  tooltip: 'Account',
+                  onPressed: () {
+                    context.push('/account');
+                  },
+                ),
+              ),
+            ),
+          ),
+
+          
           MapFab(
             onPressed: () {
               final current = location.value;
