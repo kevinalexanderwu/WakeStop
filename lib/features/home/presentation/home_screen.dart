@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -13,7 +17,11 @@ import 'widgets/trip_preview_card.dart';
 import 'widgets/active_trip_card.dart';
 import 'widgets/wake_up_card.dart';
 
+import 'package:wakestop/core/services/alarm_service.dart';
+import 'package:wakestop/core/services/distance_service.dart';
+import 'package:wakestop/core/services/location_service.dart';
 import 'package:wakestop/core/services/notification_service.dart';
+import 'package:wakestop/core/services/trip_service.dart';
 
 import 'package:wakestop/data/models/station.dart';
 import 'package:wakestop/data/providers/station_provider.dart';
@@ -21,20 +29,11 @@ import 'package:wakestop/data/providers/station_provider.dart';
 import 'package:wakestop/features/location/application/location_provider.dart';
 import 'package:wakestop/features/location/application/nearest_station_provider.dart';
 
+import 'package:wakestop/features/settings/providers/alarm_settings_provider.dart';
+
 import 'package:wakestop/features/trip/application/selected_destination_provider.dart';
 import 'package:wakestop/features/trip/application/trip_provider.dart';
 import 'package:wakestop/features/trip/service/trip_engine.dart';
-
-import 'dart:async';
-import 'package:wakestop/core/services/alarm_service.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:wakestop/core/services/location_service.dart';
-import 'package:wakestop/core/services/distance_service.dart';
-import 'package:wakestop/features/settings/providers/alarm_settings_provider.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:wakestop/core/services/trip_service.dart';
-import 'package:go_router/go_router.dart';
-
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -46,27 +45,31 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TripService _tripService = TripService();
 
-  
-  
   TransportType _selectedTransport = TransportType.all;
+
   final LocationService _locationService = LocationService();
   final DistanceService _distanceService = const DistanceService();
   final MapController _mapController = MapController();
-  
+
   bool _alarmTriggered = false;
   double? _alarmTriggerDistance;
+
   Timer? _demoTimer;
   StreamSubscription<Position>? _locationSubscription;
+
   String? _activeTripId;
+
   @override
   void initState() {
     super.initState();
+
     _listenLocation();
 
     Future.microtask(() {
       ref.read(locationProvider.notifier).start();
     });
   }
+
   void _listenLocation() async {
     final granted = await _locationService.requestPermission();
 
@@ -75,9 +78,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _locationSubscription =
         _locationService.getPositionStream().listen((position) async {
       print(
-          "📍 LOCATION UPDATE: ${position.latitude}, ${position.longitude}",
-        );
+        "📍 LOCATION UPDATE: ${position.latitude}, ${position.longitude}",
+      );
+
       final trip = ref.read(tripProvider);
+
       if (!trip.isActive || trip.destination == null) {
         return;
       }
@@ -90,31 +95,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
 
       ref.read(tripProvider.notifier).updateDistance(distance);
-      
+
       print("📏 Distance: ${distance.toStringAsFixed(1)} m");
 
-      
-    final triggerDistance = ref.read(alarmDistanceProvider);
+      final triggerDistance = ref.read(alarmDistanceProvider);
 
-    if (!_alarmTriggered && distance <= triggerDistance) {
-      print("🚨 ALARM CONDITION MET");
+      if (!_alarmTriggered && distance <= triggerDistance) {
+        print("🚨 ALARM CONDITION MET");
 
-      _alarmTriggered = true;
+        _alarmTriggered = true;
+        _alarmTriggerDistance = distance;
 
-      _alarmTriggerDistance = distance;
+        debugPrint("🔔 SHOW NOTIFICATION");
 
-      debugPrint("🔔 SHOW NOTIFICATION");
+        await NotificationService.instance.showWakeAlarm(
+          stationName: trip.destination!.name,
+        );
 
-      await NotificationService.instance.showWakeAlarm(
-        stationName: trip.destination!.name,
-      );
+        print("🔊 PLAY ALARM");
 
-      print("🔊 PLAY ALARM");
+        await AlarmService.instance.play();
 
-      await AlarmService.instance.play();
-
-      debugPrint("✅ ALARM PLAY FINISHED");
-    }
+        debugPrint("✅ ALARM PLAY FINISHED");
+      }
     });
   }
 
@@ -122,6 +125,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _locationSubscription?.cancel();
     _demoTimer?.cancel();
+
     super.dispose();
   }
 
@@ -136,6 +140,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       current: currentStation,
     );
   }
+
   void _startDemo() {
     _demoTimer?.cancel();
 
@@ -177,7 +182,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
     final state = ref.watch(homeStateProvider);
 
     final stationsAsync = ref.watch(stationsProvider);
@@ -189,6 +193,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       (previous, next) {
         next.whenData((position) async {
           debugPrint("🔥 LOCATION LISTENER CALLED");
+
           if (position == null) return;
 
           final trip = ref.read(tripProvider);
@@ -216,25 +221,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         });
       },
     );
-    
-    final selectedDestination =
-        ref.watch(selectedDestinationProvider);
 
-    final nearestStation =
-        ref.watch(nearestStationProvider);
+    final selectedDestination = ref.watch(selectedDestinationProvider);
+
+    final nearestStation = ref.watch(nearestStationProvider);
 
     final trip = ref.watch(tripProvider);
+
     double progress = 0.0;
 
     if (trip.initialDistance > 0) {
       progress = 1 - (trip.distanceMeters / trip.initialDistance);
-
       progress = progress.clamp(0.0, 1.0);
     }
 
     const averageSpeedKmh = 35.0;
 
-    final eta = ((trip.distanceMeters / 1000) / averageSpeedKmh * 60).round();
+    final eta =
+        ((trip.distanceMeters / 1000) / averageSpeedKmh * 60).round();
 
     ref.listen(
       nearestStationProvider,
@@ -255,11 +259,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       (previous, next) {
         if (!next.isActive) return;
 
-        if (
-          next.isActive &&
-          next.initialDistance > 0 &&
-          next.distanceMeters <= 20
-        ) {
+        if (next.isActive &&
+            next.initialDistance > 0 &&
+            next.distanceMeters <= 20) {
           showDialog(
             context: context,
             builder: (_) => AlertDialog(
@@ -275,8 +277,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     final duration = DateTime.now()
                         .difference(trip.startedAt!)
                         .inMinutes;
-                      
+
                     print(duration);
+
                     Navigator.pop(context);
 
                     ref.read(homeStateProvider.notifier).reset();
@@ -311,7 +314,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               selectedTransport: _selectedTransport,
             ),
           ),
-      
+
+          // SEARCH BAR + ACCOUNT BUTTON
           FloatingSearchBar(
             onTap: () async {
               final result = await context.push('/search');
@@ -322,79 +326,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               ref.read(selectedDestinationProvider.notifier).state = station;
 
-              ref
-                  .read(homeStateProvider.notifier)
-                  .selectDestination();
+              ref.read(homeStateProvider.notifier).selectDestination();
+            },
+
+            onAccountTap: () {
+              context.push('/account');
             },
           ),
 
-
-
-          Positioned(
-            top: 16,
-            right: 16,
-            child: SafeArea(
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                elevation: 4,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.person_outline_rounded,
-                    color: Colors.black87,
-                  ),
-                  tooltip: 'Account',
-                  onPressed: () {
-                    context.push('/account');
-                  },
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            top: 16,
-            right: 16,
-            child: SafeArea(
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                elevation: 4,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.person_outline_rounded,
-                    color: Colors.black87,
-                  ),
-                  tooltip: 'Account',
-                  onPressed: () {
-                    context.push('/account');
-                  },
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            top: 16,
-            right: 16,
-            child: SafeArea(
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                elevation: 4,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.history_rounded,
-                    color: Colors.black87,
-                  ),
-                  onPressed: () {
-                    context.push('/trip-history');
-                  },
-                ),
-              ),
-            ),
-          ),
-
+          // TRANSPORT CHIPS
           TransportFilterChips(
             selected: _selectedTransport,
             onSelected: (transport) {
@@ -404,30 +344,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
 
-          Positioned(
-            top: 94,
-            right: 24,
-            child: SafeArea(
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                elevation: 4,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.person_outline_rounded,
-                    color: Color(0xFF202B40),
-                  ),
-                  iconSize: 30,
-                  tooltip: 'Account',
-                  onPressed: () {
-                    context.push('/account');
-                  },
-                ),
-              ),
-            ),
-          ),
-
-          
+          // MAP LOCATION BUTTON
           MapFab(
             onPressed: () {
               final current = location.value;
@@ -444,6 +361,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
 
+          // BOTTOM CARD
           if (state != HomeViewState.searching)
             Align(
               alignment: Alignment.bottomCenter,
@@ -457,17 +375,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
 
                 data: (stations) {
-                  final previewStops =
-                      selectedDestination == null
-                          ? 0
-                          : TripEngine.remainingStops(
-                              stations: stations,
-                              current:
-                                  nearestStation.value ??
-                                      stations.first,
-                              destination:
-                                  selectedDestination,
-                            );
+                  final previewStops = selectedDestination == null
+                      ? 0
+                      : TripEngine.remainingStops(
+                          stations: stations,
+                          current:
+                              nearestStation.value ?? stations.first,
+                          destination: selectedDestination,
+                        );
 
                   return AnimatedSwitcher(
                     duration: const Duration(
@@ -475,8 +390,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
 
                     child: switch (state) {
-                      HomeViewState.idle =>
-                        const SizedBox.shrink(),
+                      HomeViewState.idle => const SizedBox.shrink(),
 
                       HomeViewState.searching =>
                         const SizedBox.shrink(),
@@ -484,12 +398,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       HomeViewState.destinationSelected =>
                         TripPreviewCard(
                           origin:
-                              nearestStation.value ??
-                                  stations.first,
+                              nearestStation.value ?? stations.first,
 
                           destination:
-                              selectedDestination ??
-                                  stations.first,
+                              selectedDestination ?? stations.first,
 
                           stops: previewStops,
 
@@ -502,54 +414,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                             try {
                               final origin =
-                                  nearestStation.value ?? stations.first;
+                                  nearestStation.value ??
+                                      stations.first;
 
-                              final position = await Geolocator.getCurrentPosition();
+                              final position =
+                                  await Geolocator.getCurrentPosition();
 
-                              final distance = Geolocator.distanceBetween(
+                              final distance =
+                                  Geolocator.distanceBetween(
                                 position.latitude,
                                 position.longitude,
                                 destination.latitude,
                                 destination.longitude,
                               );
 
-                              // Simpan perjalanan ke Supabase
-                              _activeTripId = await _tripService.startTrip(
+                              // SIMPAN PERJALANAN KE SUPABASE
+                              _activeTripId =
+                                  await _tripService.startTrip(
                                 destinationName: destination.name,
                                 transportType: destination.line,
                                 destinationLat: destination.latitude,
                                 destinationLng: destination.longitude,
-                                alarmDistance: ref.read(alarmDistanceProvider),
+                                alarmDistance:
+                                    ref.read(alarmDistanceProvider),
                               );
 
-                              // Mulai perjalanan di aplikasi
-                              ref.read(tripProvider.notifier).startTrip(
-                                stations: stations,
-                                origin: origin,
-                                destination: destination,
-                                initialDistance: distance,
-                              );
+                              // MULAI PERJALANAN DI APLIKASI
+                              ref
+                                  .read(tripProvider.notifier)
+                                  .startTrip(
+                                    stations: stations,
+                                    origin: origin,
+                                    destination: destination,
+                                    initialDistance: distance,
+                                  );
 
-                              // Ubah tampilan menjadi active trip
-                              ref.read(homeStateProvider.notifier).startTrip();
+                              // UBAH TAMPILAN MENJADI ACTIVE TRIP
+                              ref
+                                  .read(homeStateProvider.notifier)
+                                  .startTrip();
 
-                              // Jika sudah dekat dengan destinasi
-                              if (distance <= ref.read(alarmDistanceProvider)) {
+                              // JIKA SUDAH DEKAT DENGAN DESTINASI
+                              if (distance <=
+                                  ref.read(alarmDistanceProvider)) {
                                 _alarmTriggered = true;
 
-                                await NotificationService.instance.showWakeAlarm(
+                                await NotificationService.instance
+                                    .showWakeAlarm(
                                   stationName: destination.name,
                                 );
 
                                 await AlarmService.instance.play();
                               }
 
-                              debugPrint('Trip berhasil disimpan: $_activeTripId');
+                              debugPrint(
+                                'Trip berhasil disimpan: $_activeTripId',
+                              );
                             } catch (e) {
-                              debugPrint('Gagal memulai trip: $e');
+                              debugPrint(
+                                'Gagal memulai trip: $e',
+                              );
 
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
                                   SnackBar(
                                     content: Text(
                                       'Gagal menyimpan perjalanan: $e',
@@ -561,9 +489,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                         ),
 
-                      HomeViewState.activeTrip =>
-                        ActiveTripCard(
-
+                      HomeViewState.activeTrip => ActiveTripCard(
                           currentStation:
                               trip.currentStation?.name ?? "-",
 
@@ -572,24 +498,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                           remainingStops:
                               trip.remainingStops,
+
                           destination:
-                              trip.destination?.name ??
-                                  "-",
+                              trip.destination?.name ?? "-",
+
                           line:
-                              trip.destination?.line ??
-                                  "-",
-                          locationReady: trip.locationReady,
+                              trip.destination?.line ?? "-",
+
+                          locationReady:
+                              trip.locationReady,
+
                           progress: progress,
-                          distanceMeters: trip.distanceMeters,
+
+                          distanceMeters:
+                              trip.distanceMeters,
+
                           etaMinutes: eta,
+
                           onCancel: () async {
                             try {
-                              // Stop alarm
+                              // STOP ALARM
                               await AlarmService.instance.stop();
 
-                              // Update perjalanan di Supabase
+                              // UPDATE PERJALANAN DI SUPABASE
                               if (_activeTripId != null) {
-                                await _tripService.cancelTrip(_activeTripId!);
+                                await _tripService.cancelTrip(
+                                  _activeTripId!,
+                                );
 
                                 debugPrint(
                                   'Trip dibatalkan: $_activeTripId',
@@ -598,46 +533,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _activeTripId = null;
                               }
 
-                              // Stop perjalanan lokal
+                              // STOP PERJALANAN LOKAL
                               ref
                                   .read(tripProvider.notifier)
                                   .stopTrip();
 
-                              // Hapus destinasi
+                              // HAPUS DESTINASI
                               ref
-                                  .read(selectedDestinationProvider.notifier)
+                                  .read(
+                                    selectedDestinationProvider
+                                        .notifier,
+                                  )
                                   .state = null;
 
                               setState(() {
                                 _alarmTriggered = false;
                               });
 
-                              // Kembali ke home
+                              // KEMBALI KE HOME
                               ref
                                   .read(homeStateProvider.notifier)
                                   .reset();
                             } catch (e) {
-                              debugPrint('Gagal membatalkan trip: $e');
+                              debugPrint(
+                                'Gagal membatalkan trip: $e',
+                              );
                             }
                           },
 
                           onDebugPrevious: () {
                             ref
-                                .read(
-                                  tripProvider.notifier,
-                                )
+                                .read(tripProvider.notifier)
                                 .debugPreviousStation();
                           },
 
                           onDebugNext: () async {
                             ref
-                                .read(
-                                  tripProvider.notifier,
-                                )
+                                .read(tripProvider.notifier)
                                 .debugNextStation();
 
-                            await NotificationService
-                                .instance
+                            await NotificationService.instance
                                 .showWakeAlarm(
                               stationName:
                                   trip.destination?.name ??
@@ -646,24 +581,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                         ),
 
-                      HomeViewState.wakeUp =>
-                        WakeUpCard(
+                      HomeViewState.wakeUp => WakeUpCard(
                           station:
-                              trip.destination?.name ??
-                                  "",
+                              trip.destination?.name ?? "",
 
                           onStopAlarm: () {
                             ref
-                                .read(
-                                  tripProvider.notifier,
-                                )
+                                .read(tripProvider.notifier)
                                 .stopTrip();
 
                             ref
-                                .read(
-                                  homeStateProvider
-                                      .notifier,
-                                )
+                                .read(homeStateProvider.notifier)
                                 .showIdle();
                           },
                         ),
