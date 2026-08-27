@@ -11,12 +11,14 @@ class TripPreviewCard extends StatelessWidget {
     required this.destination,
     required this.stops,
     required this.onStartAlarm,
+    required this.scrollController,
   });
 
   final Station origin;
   final Station destination;
   final int stops;
   final VoidCallback onStartAlarm;
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -25,121 +27,125 @@ class TripPreviewCard extends StatelessWidget {
 
     final eta = stops * 3;
 
-    debugPrint(destination.line);
-
     return AppBottomSheetShell(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Trip Preview",
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+      expandChild: true,
+      child: SingleChildScrollView(
+        controller: scrollController,
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Trip Preview",
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          _TripPoint(
-            icon: Icons.my_location,
-            color: Colors.green,
-            title: "From",
-            subtitle: "Your location",
-          ),
-
-          const SizedBox(height: 16),
-
-          Center(
-            child: Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: scheme.outline,
+            _TripPoint(
+              icon: Icons.my_location,
+              color: Colors.green,
+              title: "From",
+              subtitle: "Your location",
             ),
-          ),
 
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          _TripPoint(
-            icon: Icons.flag,
-            color: Colors.orange,
-            title: "Destination",
-            subtitle: destination.name,
-          ),
-
-          const SizedBox(height: 20),
-
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+            Center(
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: scheme.outline,
+              ),
             ),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
+
+            const SizedBox(height: 16),
+
+            _TripPoint(
+              icon: Icons.flag,
+              color: Colors.orange,
+              title: "Destination",
+              subtitle: destination.name,
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.train_rounded),
 
-                const SizedBox(width: 12),
+            const SizedBox(height: 20),
 
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Transit Line",
-                        style: theme.textTheme.labelMedium,
-                      ),
-                      Text(
-                        destination.line,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: scheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.train_rounded),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Transit Line",
+                          style: theme.textTheme.labelMedium,
                         ),
-                      ),
-                    ],
+                        Text(
+                          destination.line,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: scheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Divider(
+                thickness: 1,
+              ),
+            ),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _InfoCard(
+                    icon: Icons.schedule,
+                    title: "ETA",
+                    value: "$eta min",
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _InfoCard(
+                    icon: Icons.train,
+                    title: "Stops",
+                    value: "$stops",
                   ),
                 ),
               ],
             ),
-          ),
 
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Divider(
-              thickness: 1,
+            const SizedBox(height: 24),
+
+            PrimaryButton(
+              label: "Start Wake Alarm",
+              icon: const Icon(
+                Icons.notifications_active_outlined,
+              ),
+              onPressed: onStartAlarm,
             ),
-          ),
-
-          Row(
-            children: [
-              Expanded(
-                child: _InfoCard(
-                  icon: Icons.schedule,
-                  title: "ETA",
-                  value: "$eta min",
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _InfoCard(
-                  icon: Icons.train,
-                  title: "Stops",
-                  value: "$stops",
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          PrimaryButton(
-            label: "Start Wake Alarm",
-            icon: const Icon(Icons.notifications_active_outlined),
-            onPressed: onStartAlarm,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -221,16 +227,12 @@ class _InfoCard extends StatelessWidget {
             icon,
             size: 22,
           ),
-
           const SizedBox(height: 8),
-
           Text(
             value,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
-
           const SizedBox(height: 4),
-
           Text(title),
         ],
       ),

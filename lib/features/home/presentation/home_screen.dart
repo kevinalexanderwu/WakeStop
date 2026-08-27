@@ -418,105 +418,106 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       HomeViewState.searching =>
                         const SizedBox.shrink(),
 
-                      HomeViewState.destinationSelected =>
-                        TripPreviewCard(
-                          origin:
-                              nearestStation.value ?? stations.first,
+                      HomeViewState.destinationSelected => DraggableScrollableSheet(
+                        initialChildSize: 0.65,
+                        minChildSize: 0.12,
+                        maxChildSize: 0.90,
+                        snap: true,
+                        snapSizes: const [0.12, 0.65, 0.90],
+                        builder: (context, scrollController) {
+                          return TripPreviewCard(
+                            scrollController: scrollController,
+                            origin: nearestStation.value ?? stations.first,
+                            destination: selectedDestination ?? stations.first,
+                            stops: previewStops,
 
-                          destination:
-                              selectedDestination ?? stations.first,
+                            onStartAlarm: () async {
+                              final destination = selectedDestination;
 
-                          stops: previewStops,
+                              if (destination == null) {
+                                return;
+                              }
 
-                          onStartAlarm: () async {
-                            final destination = selectedDestination;
+                              try {
+                                final origin =
+                                    nearestStation.value ?? stations.first;
 
-                            if (destination == null) {
-                              return;
-                            }
+                                final position =
+                                    await Geolocator.getCurrentPosition();
 
-                            try {
-                              final origin =
-                                  nearestStation.value ??
-                                      stations.first;
-
-                              final position =
-                                  await Geolocator.getCurrentPosition();
-
-                              final distance =
-                                  Geolocator.distanceBetween(
-                                position.latitude,
-                                position.longitude,
-                                destination.latitude,
-                                destination.longitude,
-                              );
-
-                              // SIMPAN PERJALANAN KE SUPABASE
-                              _activeTripId =
-                                  await _tripService.startTrip(
-                                destinationName: destination.name,
-                                transportType: destination.line,
-                                destinationLat: destination.latitude,
-                                destinationLng: destination.longitude,
-                                alarmDistance:
-                                    ref.read(alarmDistanceProvider),
-                              );
-
-                              // MULAI PERJALANAN DI APLIKASI
-                              ref
-                                  .read(tripProvider.notifier)
-                                  .startTrip(
-                                    stations: stations,
-                                    origin: origin,
-                                    destination: destination,
-                                    initialDistance: distance,
-                                  );
-
-                              // UBAH TAMPILAN MENJADI ACTIVE TRIP
-                              ref
-                                  .read(homeStateProvider.notifier)
-                                  .startTrip();
-
-                              // JIKA SUDAH DEKAT DENGAN DESTINASI
-                              final triggerDistance =
-                                  ref.read(alarmDistanceProvider);
-
-                              if (distance <= triggerDistance) {
-                                _alarmTriggered = true;
-                                _alarmTriggerDistance = distance;
-
-                                await NotificationService.instance.showWakeAlarm(
-                                  stationName: destination.name,
+                                final distance =
+                                    Geolocator.distanceBetween(
+                                  position.latitude,
+                                  position.longitude,
+                                  destination.latitude,
+                                  destination.longitude,
                                 );
 
-                                await AlarmService.instance.play();
+                                // SIMPAN PERJALANAN KE SUPABASE
+                                _activeTripId =
+                                    await _tripService.startTrip(
+                                  destinationName: destination.name,
+                                  transportType: destination.line,
+                                  destinationLat: destination.latitude,
+                                  destinationLng: destination.longitude,
+                                  alarmDistance:
+                                      ref.read(alarmDistanceProvider),
+                                );
 
+                                // MULAI PERJALANAN DI APLIKASI
+                                ref
+                                    .read(tripProvider.notifier)
+                                    .startTrip(
+                                      stations: stations,
+                                      origin: origin,
+                                      destination: destination,
+                                      initialDistance: distance,
+                                    );
+
+                                // UBAH TAMPILAN MENJADI ACTIVE TRIP
                                 ref
                                     .read(homeStateProvider.notifier)
-                                    .showWakeUp();
-                              }
+                                    .startTrip();
 
-                              debugPrint(
-                                'Trip berhasil disimpan: $_activeTripId',
-                              );
-                            } catch (e) {
-                              debugPrint(
-                                'Gagal memulai trip: $e',
-                              );
+                                final triggerDistance =
+                                    ref.read(alarmDistanceProvider);
 
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Gagal menyimpan perjalanan: $e',
-                                    ),
-                                  ),
+                                if (distance <= triggerDistance) {
+                                  _alarmTriggered = true;
+                                  _alarmTriggerDistance = distance;
+
+                                  await NotificationService.instance
+                                      .showWakeAlarm(
+                                    stationName: destination.name,
+                                  );
+
+                                  await AlarmService.instance.play();
+
+                                  ref
+                                      .read(homeStateProvider.notifier)
+                                      .showWakeUp();
+                                }
+
+                                debugPrint(
+                                  'Trip berhasil disimpan: $_activeTripId',
                                 );
+                              } catch (e) {
+                                debugPrint('Gagal memulai trip: $e');
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Gagal menyimpan perjalanan: $e',
+                                      ),
+                                    ),
+                                  );
+                                }
                               }
-                            }
-                          },
-                        ),
+                            },
+                          );
+                        },
+                      ),
 
                         HomeViewState.activeTrip => DraggableScrollableSheet(
                           initialChildSize: 0.32,
