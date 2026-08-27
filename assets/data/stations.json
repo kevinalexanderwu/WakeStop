@@ -1,5 +1,13 @@
 [
   {
+    "id": "dummy_007",
+    "name": "Test Station Aria Jipang",
+    "mode": "MRT",
+    "line": "Test Line",
+    "latitude": -6.899722,
+    "longitude": 107.615556
+  },
+  {
   "id": "test_bandung_001",
   "name": "WakeStop Test Bandung",
   "line": "Testing",

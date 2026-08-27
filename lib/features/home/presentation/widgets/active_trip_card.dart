@@ -20,6 +20,7 @@ class ActiveTripCard extends StatelessWidget {
     required this.onDebugNext,
     required this.onDebugPrevious,
     required this.locationReady,
+    required this.scrollController,
   });
 
   final String destination;
@@ -31,6 +32,7 @@ class ActiveTripCard extends StatelessWidget {
   final String currentStation;
   final String nextStation;
   final int remainingStops;
+  final ScrollController scrollController;
 
   final VoidCallback onCancel;
   final VoidCallback onDebugNext;
@@ -40,12 +42,11 @@ class ActiveTripCard extends StatelessWidget {
     final theme = Theme.of(context);
 
 return AppBottomSheetShell(
-  child: ConstrainedBox(
-    constraints: BoxConstraints(
-      maxHeight: MediaQuery.sizeOf(context).height * 0.78,
-    ),
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 16),
+  expandChild: true,
+  child: SingleChildScrollView(
+    controller: scrollController,
+    physics: const ClampingScrollPhysics(),
+    padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -249,11 +250,10 @@ return AppBottomSheetShell(
               onCancel();
             },
           ),
-
+          
         ],
       ),
     ),
-  ),
 );
 }
 

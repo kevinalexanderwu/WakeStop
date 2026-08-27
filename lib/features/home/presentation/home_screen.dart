@@ -77,16 +77,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     _locationSubscription =
         _locationService.getPositionStream().listen((position) async {
-      print(
-        "📍 LOCATION UPDATE: ${position.latitude}, ${position.longitude}",
-      );
-
       final trip = ref.read(tripProvider);
 
+      // Tidak melakukan apa-apa jika tidak ada perjalanan aktif
       if (!trip.isActive || trip.destination == null) {
         return;
       }
 
+      // Hitung jarak GPS user ke destinasi
       final distance = _distanceService.calculate(
         currentLat: position.latitude,
         currentLng: position.longitude,
@@ -94,29 +92,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         destinationLng: trip.destination!.longitude,
       );
 
+      // Update jarak di UI
       ref.read(tripProvider.notifier).updateDistance(distance);
 
-      print("📏 Distance: ${distance.toStringAsFixed(1)} m");
-
+      // Ambil jarak alarm dari Settings
       final triggerDistance = ref.read(alarmDistanceProvider);
 
-      if (!_alarmTriggered && distance <= triggerDistance) {
-        print("🚨 ALARM CONDITION MET");
+      debugPrint(
+        '📍 Distance to ${trip.destination!.name}: '
+        '${distance.toStringAsFixed(1)} m',
+      );
 
+      debugPrint(
+        '🔔 Alarm will trigger at: ${triggerDistance.toStringAsFixed(0)} m',
+      );
+
+      // Alarm hanya boleh berbunyi satu kali
+      if (_alarmTriggered) return;
+
+      // Cek apakah sudah masuk jarak alarm
+      if (distance <= triggerDistance) {
         _alarmTriggered = true;
         _alarmTriggerDistance = distance;
 
-        debugPrint("🔔 SHOW NOTIFICATION");
+        debugPrint('🚨 ALARM TRIGGERED');
 
+        // Tampilkan notifikasi
         await NotificationService.instance.showWakeAlarm(
           stationName: trip.destination!.name,
         );
 
-        print("🔊 PLAY ALARM");
+        // Bunyi alarm
+        // Langsung ubah tampilan
+        ref.read(homeStateProvider.notifier).showWakeUp();
 
-        await AlarmService.instance.play();
+        // Putar alarm tanpa menunggu selesai
+        unawaited(AlarmService.instance.play());
 
-        debugPrint("✅ ALARM PLAY FINISHED");
+        // Ubah tampilan menjadi Wake Up
+        ref.read(homeStateProvider.notifier).showWakeUp();
       }
     });
   }
@@ -165,14 +179,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         if (!_alarmTriggered && distance <= 500) {
           _alarmTriggered = true;
+          _alarmTriggerDistance = distance;
 
           await NotificationService.instance.showWakeAlarm(
             stationName: trip.destination?.name ?? "",
           );
 
-          await AlarmService.instance.play();
-        }
+          // LANGSUNG PINDAH KE WAKE UP CARD
+          ref.read(homeStateProvider.notifier).showWakeUp();
 
+          // ALARM BERJALAN DI BELAKANG
+          unawaited(AlarmService.instance.play());
+        }
         if (distance <= 0) {
           timer.cancel();
         }
@@ -211,12 +229,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           if (!_alarmTriggered && distance <= 500) {
             _alarmTriggered = true;
+            _alarmTriggerDistance = distance;
 
             await NotificationService.instance.showWakeAlarm(
               stationName: trip.destination!.name,
             );
 
-            await AlarmService.instance.play();
+            // LANGSUNG PINDAH KE WAKE UP CARD
+            ref.read(homeStateProvider.notifier).showWakeUp();
+
+            // PUTAR ALARM TANPA MENUNGGU SELESAI
+            unawaited(AlarmService.instance.play());
           }
         });
       },
@@ -455,16 +478,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   .startTrip();
 
                               // JIKA SUDAH DEKAT DENGAN DESTINASI
-                              if (distance <=
-                                  ref.read(alarmDistanceProvider)) {
-                                _alarmTriggered = true;
+                              final triggerDistance =
+                                  ref.read(alarmDistanceProvider);
 
-                                await NotificationService.instance
-                                    .showWakeAlarm(
+                              if (distance <= triggerDistance) {
+                                _alarmTriggered = true;
+                                _alarmTriggerDistance = distance;
+
+                                await NotificationService.instance.showWakeAlarm(
                                   stationName: destination.name,
                                 );
 
                                 await AlarmService.instance.play();
+
+                                ref
+                                    .read(homeStateProvider.notifier)
+                                    .showWakeUp();
                               }
 
                               debugPrint(
@@ -489,106 +518,94 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                         ),
 
-                      HomeViewState.activeTrip => ActiveTripCard(
-                          currentStation:
-                              trip.currentStation?.name ?? "-",
+                        HomeViewState.activeTrip => DraggableScrollableSheet(
+                          initialChildSize: 0.32,
+                          minChildSize: 0.12,
+                          maxChildSize: 0.75,
+                          snap: true,
+                          snapSizes: const [0.12, 0.32, 0.75],
+                          builder: (context, scrollController) {
+                            return ActiveTripCard(
+                              scrollController: scrollController,
+                              currentStation: trip.currentStation?.name ?? "-",
+                              nextStation: trip.nextStation?.name ?? "-",
+                              remainingStops: trip.remainingStops,
+                              destination: trip.destination?.name ?? "-",
+                              line: trip.destination?.line ?? "-",
+                              locationReady: trip.locationReady,
+                              progress: progress,
+                              distanceMeters: trip.distanceMeters,
+                              etaMinutes: eta,
 
-                          nextStation:
-                              trip.nextStation?.name ?? "-",
+                              onCancel: () async {
+                                try {
+                                  await AlarmService.instance.stop();
 
-                          remainingStops:
-                              trip.remainingStops,
+                                  if (_activeTripId != null) {
+                                    await _tripService.cancelTrip(_activeTripId!);
+                                    _activeTripId = null;
+                                  }
 
-                          destination:
-                              trip.destination?.name ?? "-",
+                                  ref.read(tripProvider.notifier).stopTrip();
 
-                          line:
-                              trip.destination?.line ?? "-",
+                                  ref
+                                      .read(selectedDestinationProvider.notifier)
+                                      .state = null;
 
-                          locationReady:
-                              trip.locationReady,
+                                  setState(() {
+                                    _alarmTriggered = false;
+                                  });
 
-                          progress: progress,
+                                  ref.read(homeStateProvider.notifier).reset();
+                                } catch (e) {
+                                  debugPrint('Gagal membatalkan trip: $e');
+                                }
+                              },
 
-                          distanceMeters:
-                              trip.distanceMeters,
+                              onDebugPrevious: () {
+                                ref
+                                    .read(tripProvider.notifier)
+                                    .debugPreviousStation();
+                              },
 
-                          etaMinutes: eta,
+                              onDebugNext: () async {
+                                ref
+                                    .read(tripProvider.notifier)
+                                    .debugNextStation();
 
-                          onCancel: () async {
-                            try {
-                              // STOP ALARM
-                              await AlarmService.instance.stop();
-
-                              // UPDATE PERJALANAN DI SUPABASE
-                              if (_activeTripId != null) {
-                                await _tripService.cancelTrip(
-                                  _activeTripId!,
+                                await NotificationService.instance.showWakeAlarm(
+                                  stationName:
+                                      trip.destination?.name ?? "Destination",
                                 );
-
-                                debugPrint(
-                                  'Trip dibatalkan: $_activeTripId',
-                                );
-
-                                _activeTripId = null;
-                              }
-
-                              // STOP PERJALANAN LOKAL
-                              ref
-                                  .read(tripProvider.notifier)
-                                  .stopTrip();
-
-                              // HAPUS DESTINASI
-                              ref
-                                  .read(
-                                    selectedDestinationProvider
-                                        .notifier,
-                                  )
-                                  .state = null;
-
-                              setState(() {
-                                _alarmTriggered = false;
-                              });
-
-                              // KEMBALI KE HOME
-                              ref
-                                  .read(homeStateProvider.notifier)
-                                  .reset();
-                            } catch (e) {
-                              debugPrint(
-                                'Gagal membatalkan trip: $e',
-                              );
-                            }
-                          },
-
-                          onDebugPrevious: () {
-                            ref
-                                .read(tripProvider.notifier)
-                                .debugPreviousStation();
-                          },
-
-                          onDebugNext: () async {
-                            ref
-                                .read(tripProvider.notifier)
-                                .debugNextStation();
-
-                            await NotificationService.instance
-                                .showWakeAlarm(
-                              stationName:
-                                  trip.destination?.name ??
-                                      "Destination",
+                              },
                             );
                           },
                         ),
-
                       HomeViewState.wakeUp => WakeUpCard(
                           station:
                               trip.destination?.name ?? "",
 
-                          onStopAlarm: () {
+                          onStopAlarm: () async {
+                            await AlarmService.instance.stop();
+
+                            if (_activeTripId != null) {
+                              await _tripService.completeTrip(
+                                _activeTripId!,
+                              );
+
+                              _activeTripId = null;
+                            }
+
                             ref
                                 .read(tripProvider.notifier)
                                 .stopTrip();
+
+                            ref
+                                .read(selectedDestinationProvider.notifier)
+                                .state = null;
+
+                            _alarmTriggered = false;
+                            _alarmTriggerDistance = null;
 
                             ref
                                 .read(homeStateProvider.notifier)

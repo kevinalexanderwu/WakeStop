@@ -19,6 +19,7 @@ class AppBottomSheetShell extends StatelessWidget {
     required this.child,
     this.showHandle = true,
     this.padding,
+    this.expandChild = false,
     this.borderRadius = 24,
     this.showShadow = true,
   });
@@ -38,6 +39,8 @@ class AppBottomSheetShell extends StatelessWidget {
 
   /// Whether to render the elevated drop shadow above the sheet.
   final bool showShadow;
+
+  final bool expandChild;
 
   @override
   Widget build(BuildContext context) {
@@ -64,29 +67,38 @@ class AppBottomSheetShell extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: topRadius),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: padding ??
-                  EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (showHandle) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: colors.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+          child: Padding(
+            padding: padding ??
+                EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  0,
+                  horizontalPadding,
+                  0,
+                ),
+            child: Column(
+              mainAxisSize:
+                  expandChild ? MainAxisSize.max : MainAxisSize.min,
+              children: [
+                if (showHandle) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: colors.border,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(height: 8),
-                  ],
-                  child,
+                  ),
+                  const SizedBox(height: 8),
                 ],
-              ),
+
+                if (expandChild)
+                  Expanded(
+                    child: child,
+                  )
+                else
+                  child,
+              ],
             ),
           ),
         ),
