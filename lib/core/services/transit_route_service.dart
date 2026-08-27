@@ -1,81 +1,34 @@
 import 'package:latlong2/latlong.dart';
+
 import 'package:wakestop/data/models/station.dart';
+import 'package:wakestop/features/trip/service/trip_engine.dart';
 
 class TransitRouteService {
-  const TransitRouteService();
+  TransitRouteService._();
 
-  /// Mendapatkan titik-titik polyline untuk perjalanan transit.
+  static final TransitRouteService instance =
+      TransitRouteService._();
+
+  /// Membuat rute transit dari current station menuju destination.
   ///
-  /// Saat ini mendukung perjalanan dalam jalur yang sama,
-  /// misalnya MRT North-South.
-  List<LatLng> getRoute({
+  /// Polyline dibangun dari koordinat stasiun pada jalur transportasi,
+  /// bukan dari rute mobil/jalan raya.
+  List<LatLng> getRoutePoints({
     required List<Station> stations,
-    required Station origin,
+    required Station current,
     required Station destination,
   }) {
-    // Harus menggunakan mode transportasi yang sama.
-    if (origin.mode.toLowerCase() != destination.mode.toLowerCase()) {
-      return [];
-    }
-
-    // Harus berada pada line yang sama.
-    if (origin.line.toLowerCase() != destination.line.toLowerCase()) {
-      return [];
-    }
-
-    // Ambil semua stasiun dalam mode dan line yang sama.
-    final routeStations = stations.where((station) {
-      return station.mode.toLowerCase() ==
-              origin.mode.toLowerCase() &&
-          station.line.toLowerCase() ==
-              origin.line.toLowerCase();
-    }).toList();
+    final routeStations = TripEngine.getRouteStations(
+      stations: stations,
+      current: current,
+      destination: destination,
+    );
 
     if (routeStations.isEmpty) {
       return [];
     }
 
-    // Urutkan berdasarkan nomor pada ID.
-    //
-    // Contoh:
-    // mrt_001
-    // mrt_002
-    // mrt_003
-    routeStations.sort(
-      (a, b) => _stationOrder(a).compareTo(_stationOrder(b)),
-    );
-
-    final originIndex = routeStations.indexWhere(
-      (station) => station.id == origin.id,
-    );
-
-    final destinationIndex = routeStations.indexWhere(
-      (station) => station.id == destination.id,
-    );
-
-    if (originIndex == -1 || destinationIndex == -1) {
-      return [];
-    }
-
-    final startIndex =
-        originIndex < destinationIndex
-            ? originIndex
-            : destinationIndex;
-
-    final endIndex =
-        originIndex > destinationIndex
-            ? originIndex
-            : destinationIndex;
-
-    final selectedStations = routeStations
-        .sublist(startIndex, endIndex + 1)
-        .toList();
-
-    // Jika perjalanan menuju arah urutan yang lebih kecil,
-    // balik urutan polyline.
-  if (originIndex > destinationIndex) {
-    return selectedStations
-        .reversed
+    return routeStations
         .map(
           (station) => LatLng(
             station.latitude,
@@ -85,28 +38,29 @@ class TransitRouteService {
         .toList();
   }
 
-    return selectedStations
-        .map(
-          (station) => LatLng(
-            station.latitude,
-            station.longitude,
-          ),
-        )
-        .toList();
+  /// Mengambil stasiun-stasiun yang dilalui.
+  List<Station> getRouteStations({
+    required List<Station> stations,
+    required Station current,
+    required Station destination,
+  }) {
+    return TripEngine.getRouteStations(
+      stations: stations,
+      current: current,
+      destination: destination,
+    );
   }
 
-  /// Mengambil angka urutan dari ID station.
-  ///
-  /// Contoh:
-  /// mrt_001 -> 1
-  /// mrt_012 -> 12
-  int _stationOrder(Station station) {
-    final match = RegExp(r'(\d+)$').firstMatch(station.id);
-
-    if (match == null) {
-      return 999999;
-    }
-
-    return int.tryParse(match.group(1)!) ?? 999999;
+  /// Menghitung jumlah perjalanan antar-stasiun.
+  int getStops({
+    required List<Station> stations,
+    required Station current,
+    required Station destination,
+  }) {
+    return TripEngine.remainingStops(
+      stations: stations,
+      current: current,
+      destination: destination,
+    );
   }
 }

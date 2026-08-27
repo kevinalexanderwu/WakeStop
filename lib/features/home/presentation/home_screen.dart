@@ -320,22 +320,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: TransitMap(
-              mapController: _mapController,
-              userLocation: location.value == null
-                  ? null
-                  : LatLng(
-                      location.value!.latitude,
-                      location.value!.longitude,
-                    ),
-              destination: selectedDestination == null
-                  ? null
-                  : LatLng(
-                      selectedDestination.latitude,
-                      selectedDestination.longitude,
-                    ),
-              selectedTransport: _selectedTransport,
-            ),
+          child: TransitMap(
+            mapController: _mapController,
+
+            userLocation: location.value == null
+                ? null
+                : LatLng(
+                    location.value!.latitude,
+                    location.value!.longitude,
+                  ),
+
+            destination: selectedDestination == null
+                ? null
+                : LatLng(
+                    selectedDestination.latitude,
+                    selectedDestination.longitude,
+                  ),
+
+            currentStation: nearestStation.value,
+
+            destinationStation: selectedDestination,
+
+            selectedTransport: _selectedTransport,
+          ),
           ),
 
           // SEARCH BAR + ACCOUNT BUTTON
@@ -398,14 +405,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
 
                 data: (stations) {
-                  final previewStops = selectedDestination == null
-                      ? 0
-                      : TripEngine.remainingStops(
-                          stations: stations,
-                          current:
-                              nearestStation.value ?? stations.first,
-                          destination: selectedDestination,
-                        );
+                    final destination = selectedDestination;
+
+                    final origin = destination == null
+                        ? null
+                        : stations.where(
+                            (station) =>
+                                station.mode == destination.mode &&
+                                station.line == destination.line,
+                          ).firstWhere(
+                            (station) => station.id == 'mrt_006',
+                            orElse: () => nearestStation.value ?? stations.first,
+                          );
+
+                    final previewStops = destination == null || origin == null
+                        ? 0
+                        : TripEngine.remainingStops(
+                            stations: stations,
+                            current: origin,
+                            destination: destination,
+                          );
 
                   return AnimatedSwitcher(
                     duration: const Duration(

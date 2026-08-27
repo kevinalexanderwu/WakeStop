@@ -3,10 +3,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:wakestop/core/services/transit_route_service.dart';
+import 'package:wakestop/data/models/station.dart';
 import 'package:wakestop/data/providers/station_provider.dart';
 import 'package:wakestop/features/home/presentation/widgets/transport_filter_chips.dart';
-
-import 'package:wakestop/core/services/route_service.dart';
 
 class TransitMap extends ConsumerStatefulWidget {
   const TransitMap({
@@ -14,12 +14,20 @@ class TransitMap extends ConsumerStatefulWidget {
     required this.mapController,
     required this.userLocation,
     this.destination,
+    this.currentStation,
+    this.destinationStation,
     required this.selectedTransport,
   });
 
   final MapController mapController;
   final LatLng? userLocation;
   final LatLng? destination;
+
+  /// Stasiun asal perjalanan.
+  final Station? currentStation;
+
+  /// Stasiun tujuan perjalanan.
+  final Station? destinationStation;
 
   final TransportType selectedTransport;
 
@@ -28,105 +36,98 @@ class TransitMap extends ConsumerStatefulWidget {
 }
 
 class _TransitMapState extends ConsumerState<TransitMap> {
-
-  final RouteService _routeService = RouteService();
-
   List<LatLng> _routePoints = [];
   bool _hasCentered = false;
-  LatLng? _lastDestination;
+
+  String? _lastRouteKey;
 
   @override
   void didUpdateWidget(covariant TransitMap oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.destination != null &&
-        widget.destination != _lastDestination) {
-      _lastDestination = widget.destination;
+    _updateRouteIfNeeded();
+  }
 
-      WidgetsBinding.instance.addPostFrameCallback((_)async {
-        final camera = CameraFit.coordinates(
-          coordinates: [
-            widget.userLocation!,
-            widget.destination!,
-          ],
-          padding: const EdgeInsets.only(
-            top: 80,
-            left: 40,
-            right: 40,
-            bottom: 260, // ruang untuk Trip Preview
-          ),
-        );
+  void _updateRouteIfNeeded() {
+    final current = widget.currentStation;
+    final destination = widget.destinationStation;
 
-        widget.mapController.fitCamera(camera);
-        try {
-          final points = await _routeService.getRoute(
-            start: widget.userLocation!,
-            end: widget.destination!,
-          );
+    if (current == null || destination == null) {
+      if (_routePoints.isNotEmpty && mounted) {
+        setState(() {
+          _routePoints = [];
+        });
+      }
+      return;
+    }
 
+    final routeKey = '${current.id}_${destination.id}';
+
+    if (routeKey == _lastRouteKey) {
+      return;
+    }
+
+    _lastRouteKey = routeKey;
+
+    final stationsAsync = ref.read(stationsProvider);
+
+    stationsAsync.whenData((stations) {
+      final points = TransitRouteService.instance.getRoutePoints(
+        stations: stations,
+        current: current,
+        destination: destination,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _routePoints = points;
+      });
+
+      if (points.length >= 2) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
 
-          setState(() {
-            _routePoints = points;
-          });
-        } catch (e) {
-          debugPrint("Failed to load route: $e");
-        }
-      });
-    }
-  }
+          final camera = CameraFit.coordinates(
+            coordinates: points,
+            padding: const EdgeInsets.only(
+              top: 80,
+              left: 40,
+              right: 40,
+              bottom: 260,
+            ),
+          );
 
-  Color _stationColor(String line) {
-    final lower = line.toLowerCase();
-
-    if (lower.contains("mrt")) {
-      return Colors.red;
-    }
-
-    if (lower.contains("krl")) {
-      return Colors.green;
-    }
-
-    if (lower.contains("lrt")) {
-      return Colors.deepPurple;
-    }
-
-    if (lower.contains("transjakarta")) {
-      return Colors.blue;
-    }
-
-    return Colors.grey;
-  }
-
-  IconData _stationIcon(String line) {
-    final lower = line.toLowerCase();
-
-    if (lower.contains("mrt")) {
-      return Icons.subway;
-    }
-
-    if (lower.contains("krl")) {
-      return Icons.train;
-    }
-
-    if (lower.contains("lrt")) {
-      return Icons.tram;
-    }
-
-    if (lower.contains("transjakarta") ||
-        lower.contains("bus")) {
-      return Icons.directions_bus;
-    }
-
-    return Icons.location_on;
+          widget.mapController.fitCamera(camera);
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final stationsAsync = ref.watch(stationsProvider);
 
+    // Update route ketika data station selesai dimuat
+    stationsAsync.whenData((stations) {
+      final current = widget.currentStation;
+      final destination = widget.destinationStation;
+
+      if (current != null && destination != null) {
+        final routeKey = '${current.id}_${destination.id}';
+
+        if (routeKey != _lastRouteKey) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updateRouteIfNeeded();
+          });
+        }
+      }
+    });
+
     if (!_hasCentered && widget.userLocation != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_)async {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
         widget.mapController.move(
           widget.userLocation!,
           15,
@@ -148,18 +149,16 @@ class _TransitMapState extends ConsumerState<TransitMap> {
           userAgentPackageName: "com.example.wakestop",
         ),
 
-        if (widget.userLocation != null && widget.destination != null)
+        // ==========================
+        // Transit Route Polyline
+        // ==========================
+        if (_routePoints.length >= 2)
           PolylineLayer(
             polylines: [
               Polyline(
-                points: _routePoints.isNotEmpty
-                    ? _routePoints
-                    : [
-                        widget.userLocation!,
-                        widget.destination!,
-                      ],
+                points: _routePoints,
                 strokeWidth: 6,
-                color: Colors.blue.shade600
+                color: Colors.blue.shade600,
               ),
             ],
           ),
@@ -196,6 +195,9 @@ class _TransitMapState extends ConsumerState<TransitMap> {
             ],
           ),
 
+        // ==========================
+        // Destination Marker
+        // ==========================
         if (widget.destination != null)
           MarkerLayer(
             markers: [
@@ -213,7 +215,7 @@ class _TransitMapState extends ConsumerState<TransitMap> {
           ),
 
         // ==========================
-        // Station Markers (dengan filter)
+        // Station Markers
         // ==========================
         stationsAsync.when(
           data: (stations) {
@@ -232,7 +234,9 @@ class _TransitMapState extends ConsumerState<TransitMap> {
                   return station.mode.toLowerCase().contains("lrt");
 
                 case TransportType.bus:
-                  return station.mode.toLowerCase().contains("transjakarta");
+                  return station.mode
+                      .toLowerCase()
+                      .contains("transjakarta");
               }
             }).toList();
 
@@ -284,5 +288,30 @@ class _TransitMapState extends ConsumerState<TransitMap> {
         ),
       ],
     );
+  }
+
+  Color _stationColor(String line) {
+    final lower = line.toLowerCase();
+
+    if (lower.contains("mrt")) return Colors.red;
+    if (lower.contains("krl")) return Colors.green;
+    if (lower.contains("lrt")) return Colors.deepPurple;
+    if (lower.contains("transjakarta")) return Colors.blue;
+
+    return Colors.grey;
+  }
+
+  IconData _stationIcon(String line) {
+    final lower = line.toLowerCase();
+
+    if (lower.contains("mrt")) return Icons.subway;
+    if (lower.contains("krl")) return Icons.train;
+    if (lower.contains("lrt")) return Icons.tram;
+
+    if (lower.contains("transjakarta") || lower.contains("bus")) {
+      return Icons.directions_bus;
+    }
+
+    return Icons.location_on;
   }
 }

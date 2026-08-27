@@ -1,12 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 
-/// A single transit station/stop.
-///
-/// Mirrors the `Station` interface from the source prototype
-/// (`{ id, name, line, eta? }`), with `eta` upgraded from a formatted
-/// display string to a [Duration] so formatting stays a presentation
-/// concern (see Section 7 — Data Models — of the architecture analysis).
 @immutable
 class Station extends Equatable {
   const Station({
@@ -16,24 +10,20 @@ class Station extends Equatable {
     required this.line,
     required this.latitude,
     required this.longitude,
+    required this.order,
     this.eta,
   });
-  final String mode;
-  /// Stable unique identifier for the station.
+
   final String id;
-
-  /// Display name, e.g. "Dukuh Atas BNI".
   final String name;
-
-  /// Owning line name, e.g. "MRT Utara–Selatan", "KRL Bogor".
+  final String mode;
   final String line;
-
   final double latitude;
-
   final double longitude;
 
-  /// Optional estimated time of arrival/travel time to this station.
-  /// Formatted for display at the presentation layer (e.g. "12 min").
+  /// Urutan stasiun pada jalur transportasi.
+  final int order;
+
   final Duration? eta;
 
   Station copyWith({
@@ -43,6 +33,7 @@ class Station extends Equatable {
     String? line,
     double? latitude,
     double? longitude,
+    int? order,
     Duration? eta,
   }) {
     return Station(
@@ -52,23 +43,26 @@ class Station extends Equatable {
       line: line ?? this.line,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      order: order ?? this.order,
       eta: eta ?? this.eta,
     );
   }
 
   @override
   List<Object?> get props => [
-    id,
-    name,
-    mode,
-    line,
-    latitude,
-    longitude,
-    eta,
-  ];
+        id,
+        name,
+        mode,
+        line,
+        latitude,
+        longitude,
+        order,
+        eta,
+      ];
 
   @override
   bool get stringify => true;
+
   factory Station.fromJson(Map<String, dynamic> json) {
     return Station(
       id: json['id'] as String,
@@ -77,6 +71,7 @@ class Station extends Equatable {
       line: (json['line'] ?? '') as String,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
+      order: (json['order'] as num?)?.toInt() ?? 0,
     );
   }
 }
